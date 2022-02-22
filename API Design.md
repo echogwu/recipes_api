@@ -5,7 +5,9 @@ This file is aimed to document the final data structure returned by each API end
 
 ## get all recipes
 Method: GET
+
 URL: `http://127.0.0.1:5000/recipes`
+
 Response:
 
     {
@@ -58,12 +60,17 @@ Response:
 
 ## get recipes by tags
 Method: GET
+
 URL: http://127.0.0.1:5000/recipes?tags=avery_safe&comfort_food
+
 Response: same as responses from [above](#get-all-recipes) url
+
 
 ## get all tags
 Method: GET
+
 URL: http://127.0.0.1:5000/recipes/tags
+
 Response:
 
     {
@@ -76,9 +83,12 @@ Response:
       ]
     }
 
+
 ## create a new recipe
 Method: POST
+
 URL: http://127.0.0.1:5000/recipes
+
 Request Body:
 
     {
@@ -88,6 +98,7 @@ Request Body:
         "ingredients": "carrots",
         "instructions": "instructions placeholder"
     }
+
 Response: 
 
     {
@@ -131,7 +142,9 @@ Response:
 
 ## update a recipe
 Method: PUT
+
 URL: http://127.0.0.1:5000/recipes
+
 Request Body:
 
     {
