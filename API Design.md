@@ -63,7 +63,7 @@ Method: GET
 
 URL: http://127.0.0.1:5000/recipes?tags=avery_safe&comfort_food
 
-Response: same as responses from [above](#get-all-recipes) url
+Response: same as the response from [above](#get-all-recipes) endpoint
 
 
 ## get all tags
@@ -92,11 +92,42 @@ URL: http://127.0.0.1:5000/recipes
 Request Body:
 
     {
-        "name": "saag",
-        "active_time": 10,
-        "total_time": 20,
-        "ingredients": "carrots",
-        "instructions": "instructions placeholder"
+      "id":1,
+      "name":"saag",
+      "description": "This recipe is all about work in parallel",
+
+      // default unit is minute, if it goes over 1 hour, front end should convert it into x hour(s) y minute(s)
+      "active_time":10,
+      "total_time":20,
+
+      // "tags" might be null
+      "tags":[
+          "non_dairy",
+          "non_wheat",
+          "comfort_food"
+      ],
+
+      // "ingredients" might be null. But if it is not, "unit" is required for each ingredient but "prep" is optional 
+      "ingredients":[
+        {
+          "name":"celery",
+          "quantity":1,
+          "unit":"cup",
+          "prep":"cut into nail size pieces"
+        },
+        {
+          "name":"spinach",
+          "quantity":5,
+          "unit":"cup"
+        }
+      ],
+
+      // "instructions" might be null
+      "instructions":[
+          "step 1 instruction",
+          "step 2 instruction",
+          "step 3 instruction"
+      ]
     }
 
 Response: 
@@ -145,46 +176,6 @@ Method: PUT
 
 URL: http://127.0.0.1:5000/recipes
 
-Request Body:
+Request Body: same as the request body from [above](#create-a-new-recipe) endpoint. 
 
-    {
-      "id":1,
-      "name":"saag",
-      "description": "This recipe is all about work in parallel",
-
-      // default unit is minute, if it goes over 1 hour, front end should convert it into x hour(s) y minute(s)
-      "active_time":10,
-      "total_time":20,
-
-      // "tags" might be null
-      "tags":[
-          "non_dairy",
-          "non_wheat",
-          "comfort_food"
-      ],
-
-      // "ingredients" might be null. But if it is not, "unit" is required for each ingredient but "prep" is optional 
-      "ingredients":[
-        {
-          "name":"celery",
-          "quantity":1,
-          "unit":"cup",
-          "prep":"cut into nail size pieces"
-        },
-        {
-          "name":"spinach",
-          "quantity":5,
-          "unit":"cup"
-        }
-      ],
-
-      // "instructions" might be null
-      "instructions":[
-          "step 1 instruction",
-          "step 2 instruction",
-          "step 3 instruction"
-      ]
-    }
-
-Response:
-None
+Response: same as the response from [above](#create-a-new-recipe) endpoint
