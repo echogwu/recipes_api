@@ -13,6 +13,7 @@ Response:
           {
             "id":1,
             "name":"saag",
+            "description": "This recipe is all about work in parallel",
 
             // default unit is minute, if it goes over 1 hour, front end should convert it into x hour(s) y minute(s)
             "active_time":10,
@@ -92,6 +93,7 @@ Response:
     {
       "id":1,
       "name":"saag",
+      "description": "This recipe is all about work in parallel",
 
       // default unit is minute, if it goes over 1 hour, front end should convert it into x hour(s) y minute(s)
       "active_time":10,
@@ -135,6 +137,7 @@ Request Body:
     {
       "id":1,
       "name":"saag",
+      "description": "This recipe is all about work in parallel",
 
       // default unit is minute, if it goes over 1 hour, front end should convert it into x hour(s) y minute(s)
       "active_time":10,
