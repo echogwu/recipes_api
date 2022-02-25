@@ -1,9 +1,14 @@
-from re import I
-import xxlimited
-from db import db
+from typing import List
+
+from sqlalchemy import null
+from db import dynamodb
+from constants import RECIPE_TABLE_NAME
+from boto3.dynamodb.conditions import Attr
+
+table = dynamodb.Table(RECIPE_TABLE_NAME)
 
 
-class RecipeModel(db.Model):
+class RecipeModel():
     __tablename__ = "recipes"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -27,9 +32,9 @@ class RecipeModel(db.Model):
         name: str,
         active_time: int,
         total_time: int,
-        tags: str,
-        ingredients: str,
-        instructions: str,
+        tags: List[str],
+        ingredients: List[str],
+        instructions: List[str],
     ):
         self.name = name
         self.active_time = active_time
@@ -73,35 +78,54 @@ class RecipeModel(db.Model):
 
     @classmethod
     def find_all_recipes(cls):
-        return cls.query.all()
+        return table.scan().get("Items")
 
     @classmethod
     def find_recipe_by_recipe_name(cls, name: str):
-        return cls.query.filter_by(name=name).first()
-
-    @classmethod
-    def find_recipes_by_partial_recipe_name(cls, name: str):
-        # return cls.query.filter_by(name=name)
-        return cls.query.filter(cls.name.ilike(name)).all()
+        response = table.scan(Limit=10,
+                              Select='ALL_ATTRIBUTES',
+                              ReturnConsumedCapacity='TOTAL',
+                              FilterExpression=Attr('name').contains(name),
+                              ConsistentRead=True)
+        return response.get("Items")
 
     @classmethod
     def find_recipes_by_ingredient_name(cls, ingredient: str):
-        return cls.query.filter(cls.ingredients.ilike(ingredient)).all()
+        response = table.scan(
+            Limit=10,
+            Select='ALL_ATTRIBUTES',
+            ReturnConsumedCapacity='TOTAL',
+            FilterExpression=Attr('ingredients.name').contains(ingredient),
+            ConsistentRead=True)
+        return response.get("Items")
 
     @classmethod
-    def find_recipe_by_id(cls, id: int):
-        return cls.query.filter_by(id=id).first()
+    def find_recipe_by_id(cls, _id: int):
+        result = table.get_item(Key={'id': _id}).get("Items")
+        if not result:
+            return None
+        else:
+            return result[0]
 
     @classmethod
     def find_recipes_by_tags(cls, tags: str):
         """
-        example argument: "non_dairy,non_wheat,comfort_food"
+        find all the recipes that have all the tags
         """
-        tags = tags.split(",")
         result = set()
         for tag in tags:
-            result = result.union(
-                cls.query.filter(cls.tags.contains(tag)).all())
+            # result = result.union(
+            #     cls.query.filter(cls.tags.contains(tag)).all())
+            recipes_with_a_specific_tag = set(
+                table.scan(Limit=10,
+                           Select='ALL_ATTRIBUTES',
+                           ReturnConsumedCapacity='TOTAL',
+                           FilterExpression=Attr('tags').contains(tag),
+                           ConsistentRead=True).get("Items"))
+            if result:
+                result = result.intersection(recipes_with_a_specific_tag)
+            else:
+                result = recipes_with_a_specific_tag
         return list(result)
 
     @classmethod
@@ -110,18 +134,19 @@ class RecipeModel(db.Model):
         return a list of unique tags.
         example result: ["comfort_food","non_dairy","non_wheat"]
         """
-        entries = db.session.query(cls.tags).all()
         tags = set()
-        for entry in entries:
-            tags = tags.union(
-                cls.parse_db_entry_string(attribute=cls.TAGS,
-                                          string_to_be_parsed=entry[0]))
+        response = table.scan(Limit=100,
+                              Select='SPECIFIC_ATTRIBUTES',
+                              AttributesToGet=['tags'],
+                              ReturnConsumedCapacity='TOTAL',
+                              ConsistentRead=True)
+        tags_list = response.get("Items")
+        for ele in tags_list:
+            tags.union(ele)
         return list(tags)
 
     def save_to_db(self):
-        db.session.add(self)
-        db.session.commit()
+        table.put_item(Item=self.json())
 
-    def delete_from_db(self):
-        db.session.delete(self)
-        db.session.commit()
+    def delete_from_db(self, _id: int):
+        table.delete_item(Key={'id': _id})
