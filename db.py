@@ -16,14 +16,14 @@ if RECIPE_TABLE_NAME not in all_dynamodb_table_names:
     table = dynamodb.create_table(TableName=RECIPE_TABLE_NAME,
                                   KeySchema=[
                                       {
-                                          'AttributeName': 'id',
+                                          'AttributeName': 'recipeId',
                                           'KeyType': 'HASH'
                                       },
                                   ],
                                   AttributeDefinitions=[
                                       {
-                                          'AttributeName': 'id',
-                                          'AttributeType': 'N'
+                                          'AttributeName': 'recipeId',
+                                          'AttributeType': 'S'
                                       },
                                   ],
                                   ProvisionedThroughput={
