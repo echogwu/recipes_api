@@ -111,14 +111,12 @@ Request Body:
       "ingredients":[
         {
           "name":"celery",
-          "quantity":1,
-          "unit":"cup",
+          "amount": "1 cup",
           "prep":"cut into nail size pieces"
         },
         {
           "name":"spinach",
-          "quantity":5,
-          "unit":"cup"
+          "amount": "5 cups"
         }
       ],
 
@@ -152,14 +150,12 @@ Response:
       "ingredients":[
         {
           "name":"celery",
-          "quantity":1,
-          "unit":"cup",
+          "amount": "1 cup",
           "prep":"cut into nail size pieces"
         },
         {
           "name":"spinach",
-          "quantity":5,
-          "unit":"cup"
+          "amount": "5 cups"
         }
       ],
 

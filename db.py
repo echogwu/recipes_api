@@ -14,16 +14,36 @@ print(all_dynamodb_table_names)
 if RECIPE_TABLE_NAME not in all_dynamodb_table_names:
     # Create the DynamoDB table.
     table = dynamodb.create_table(TableName=RECIPE_TABLE_NAME,
+                                  AttributeDefinitions=[{
+                                      'AttributeName': 'recipeId',
+                                      'AttributeType': 'S'
+                                  }, {
+                                      'AttributeName': 'name',
+                                      'AttributeType': 'S'
+                                  }],
                                   KeySchema=[
                                       {
                                           'AttributeName': 'recipeId',
                                           'KeyType': 'HASH'
                                       },
                                   ],
-                                  AttributeDefinitions=[
+                                  GlobalSecondaryIndexes=[
                                       {
-                                          'AttributeName': 'recipeId',
-                                          'AttributeType': 'S'
+                                          'IndexName':
+                                          'nameIndex',
+                                          'KeySchema': [
+                                              {
+                                                  'AttributeName': 'name',
+                                                  'KeyType': 'HASH'
+                                              },
+                                          ],
+                                          'Projection': {
+                                              'ProjectionType': 'ALL',
+                                          },
+                                          'ProvisionedThroughput': {
+                                              'ReadCapacityUnits': 10,
+                                              'WriteCapacityUnits': 10
+                                          }
                                       },
                                   ],
                                   ProvisionedThroughput={

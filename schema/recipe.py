@@ -8,11 +8,14 @@ class RecipeSchema(Schema):
     #     load_only = ("password", )
     #     dump_only = ("id", )
 
-    id = fields.Str(required=True)
+    recipeId = fields.Str(required=True)
     name = fields.Str(required=True)
     description = fields.Str()
     active_time = fields.Int()
     total_time = fields.Int()
-    tags = fields.List()
-    ingredients = fields.List()
-    instructions = fields.List()
+    tags = fields.List(fields.Str)
+    ingredients = fields.List(fields.Dict)
+    instructions = fields.List(fields.Str)
+
+
+recipe_schema = RecipeSchema()
