@@ -3,3 +3,4 @@ Flask-RESTful
 Flask-SQLAlchemy
 boto3
 marshmallow
+flask-cors
