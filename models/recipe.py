@@ -58,35 +58,35 @@ class RecipeModel():
         if not args:
             return RecipeModel._find_all_recipes()
         name = args.get("name")
-        tags = args.get("tags")  # TODO parse it so filter expression can work
+        tags = args.get("tags")
+        if tags:
+            tags = tags.split(",")
         active_time = int(args.get("active_time", 0))
         total_time = int(args.get("total_time", 0))
-        ingredients = args.get(
-            "ingredients")  # TODO parse it so filter expression can work
+        ingredients = args.get("ingredients")
+        if ingredients:
+            ingredients = ingredients.split(",")
 
-        print(f"active_time: {active_time}")
+        print(f"llltags: {tags}")
 
         filter_expression = ''
         if name:
             filter_expression = Attr('name').contains(name)
         if tags:
-            filter_expression = filter_expression & Attr('tags').contains(
-                tags) if filter_expression else Attr('tags').contains(tags)
+            for tag in tags:
+                attr_filter_expression = Attr('tags').contains(tag)
+                filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
         if active_time:
-            filter_expression = filter_expression & Attr('active_time').lte(
-                active_time) if filter_expression else Attr('active_time').lte(
-                    active_time)
+            attr_filter_expression = Attr('active_time').lte(active_time)
+            filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
         if total_time:
-            filter_expression = filter_expression & Attr('total_time').lte(
-                total_time) if filter_expression else Attr('total_time').lte(
-                    total_time)
+            attr_filter_expression = Attr('total_time').lte(total_time)
+            filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
         if ingredients:
-            filter_expression = filter_expression & Attr(
-                "ingredients").contains(
-                    ingredients) if filter_expression else Attr(
-                        "ingredients").contains(ingredients)
-        print(f"active_time: {active_time}")
-        print(f"filter_expression: {filter_expression}")
+            for ingredient in ingredients:
+                attr_filter_expression = Attr("ingredients.name").contains(
+                    ingredient)
+                filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
         recipes = table.scan(Select='ALL_ATTRIBUTES',
                              Limit=10,
                              FilterExpression=filter_expression).get("Items")
