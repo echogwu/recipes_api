@@ -1,14 +1,8 @@
-from argparse import Action
-from email.policy import strict
-from flask import request
-from typing import List
-from tokenize import String
-from flask_restful import Resource, reqparse
-from sqlalchemy import false
+from flask_restful import Resource
 from models.recipe import RecipeModel
 from schema.recipe import recipe_schema
 from schema.recipe_search_schema import recipe_search_schema
-from request_utils import get_request_args
+from utils.request_utils import get_request_args
 
 
 class RecipesByTag(Resource):
@@ -33,7 +27,6 @@ class Recipes(Resource):
     def get(self):
         # needs to dump it with JsonDecimalEncoder because dynamodb returns decimal type instead of int
         # return {"recipes": RecipeModel.find_all_recipes()}
-        print(get_request_args(recipe_search_schema))
         args = get_request_args(recipe_search_schema)
         return {"recipes": RecipeModel.find_recipes_by_args(args)}
 

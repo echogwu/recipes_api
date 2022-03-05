@@ -4,16 +4,12 @@ from marshmallow import Schema, fields
 
 class RecipeSchema(Schema):
 
-    # class Meta:
-    #     load_only = ("password", )
-    #     dump_only = ("id", )
-
     recipeId = fields.Str(required=True)
     name = fields.Str(required=True)
     description = fields.Str()
     active_time = fields.Int()
     total_time = fields.Int()
-    tags = fields.List(fields.Str)
+    tags = fields.List(fields.Str())
     ingredients = fields.Dict(keys=fields.Str(),
                               values=fields.Dict(keys=fields.Str(),
                                                  values=fields.Str()))

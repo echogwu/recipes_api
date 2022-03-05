@@ -1,6 +1,6 @@
 import boto3
 from boto3.dynamodb.conditions import Attr
-from constants import DYNAMODB_ACCESS_KEY, DYNAMODB_SECRET_KEY, RECIPE_TABLE_NAME
+from utils.constants import DYNAMODB_ACCESS_KEY, DYNAMODB_SECRET_KEY, RECIPE_TABLE_NAME
 
 # Get the service resource.
 dynamodb = boto3.resource('dynamodb',

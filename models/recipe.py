@@ -1,9 +1,9 @@
 from typing import List
 
-from db import dynamodb
-from constants import RECIPE_TABLE_NAME
+from utils.db import dynamodb
+from utils.constants import RECIPE_TABLE_NAME
 from boto3.dynamodb.conditions import Attr, Key
-from json_encoder import JsonDecimalEncoder
+from utils.json_encoder import JsonDecimalEncoder
 import json
 
 table = dynamodb.Table(RECIPE_TABLE_NAME)
