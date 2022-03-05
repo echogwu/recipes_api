@@ -67,8 +67,6 @@ class RecipeModel():
         if ingredients:
             ingredients = ingredients.split(",")
 
-        print(f"llltags: {tags}")
-
         filter_expression = ''
         if name:
             filter_expression = Attr('name').contains(name)
@@ -84,8 +82,8 @@ class RecipeModel():
             filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
         if ingredients:
             for ingredient in ingredients:
-                attr_filter_expression = Attr("ingredients.name").contains(
-                    ingredient)
+                attr_filter_expression = Attr(
+                    f"ingredients.{ingredient}").exists()
                 filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
         recipes = table.scan(Select='ALL_ATTRIBUTES',
                              Limit=10,
