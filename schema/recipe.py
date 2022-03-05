@@ -14,7 +14,9 @@ class RecipeSchema(Schema):
     active_time = fields.Int()
     total_time = fields.Int()
     tags = fields.List(fields.Str)
-    ingredients = fields.List(fields.Dict)
+    ingredients = fields.Dict(keys=fields.Str(),
+                              values=fields.Dict(keys=fields.Str(),
+                                                 values=fields.Str()))
     instructions = fields.List(fields.Str)
 
 
