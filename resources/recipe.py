@@ -1,9 +1,8 @@
-from email.policy import strict
-import string
-from tokenize import String
-from flask_restful import Resource, reqparse
-from sqlalchemy import false
+from flask_restful import Resource
 from models.recipe import RecipeModel
+from schema.recipe import recipe_schema
+from schema.recipe_search_schema import recipe_search_schema
+from utils.request_utils import get_request_args
 
 
 class RecipesByTag(Resource):
@@ -24,55 +23,12 @@ class Tags(Resource):
 
 
 class Recipes(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument(
-        "id",
-        type=int,
-        required=False,
-        help="This is the id of the recipe, can be left empty",
-    )
-    parser.add_argument(
-        "name",
-        type=str,
-        required=True,
-        help="This is the name of the recipe, can't be left empty",
-    )
-    parser.add_argument(
-        "active_time",
-        type=int,
-        required=True,
-        help="This is the active_time of the recipe, can't be left empty",
-    )
-    parser.add_argument(
-        "total_time",
-        type=int,
-        required=True,
-        help="This is the total_time of the recipe, can't be left empty",
-    )
-    parser.add_argument(
-        "tags",
-        type=str,
-        required=False,
-        help="This is the tags of the recipe, can be left empty",
-    )
-    parser.add_argument(
-        "ingredients",
-        type=str,
-        required=True,
-        help="This is the ingredients of the recipe, can't be left empty",
-    )
-    parser.add_argument(
-        "instructions",
-        type=str,
-        required=True,
-        help="This is the instructions of the recipe, can't be left empty",
-    )
 
     def get(self):
-        return {
-            "recipes":
-            [recipe.json() for recipe in RecipeModel.find_all_recipes()]
-        }
+        # needs to dump it with JsonDecimalEncoder because dynamodb returns decimal type instead of int
+        # return {"recipes": RecipeModel.find_all_recipes()}
+        args = get_request_args(recipe_search_schema)
+        return {"recipes": RecipeModel.find_recipes_by_args(args)}
 
     def post(self):
         """
@@ -80,7 +36,12 @@ class Recipes(Resource):
         If the exactly same recipe name already exits, it will return 400 error code.
         Otherwise, it will save the recipe to the database.
         """
-        payload = Recipes.parser.parse_args()
+        payload = get_request_args(recipe_schema)
+        recipe_id = payload["recipeId"]
+        if RecipeModel.find_recipe_by_id(recipe_id):
+            return {
+                "message": f"a recipe with id '{recipe_id}' already exists."
+            }, 400
         recipe_name = payload["name"]
         if RecipeModel.find_recipe_by_recipe_name(recipe_name):
             return {
@@ -96,13 +57,13 @@ class Recipes(Resource):
         The PUT method is to update an existing recipe. The recipe_id must be included in the payload. 
         All other required arguments should also be included in the payload.
         """
-        payload = Recipes.parser.parse_args()
-        if "id" not in payload:
+        payload = get_request_args(recipe_schema)
+        if "recipeId" not in payload:
             return {
                 "message":
                 "this payload must contain a recipe id in order to update it"
             }, 400
-        recipe = RecipeModel.find_recipe_by_id(payload["id"])
+        recipe = RecipeModel.find_recipe_by_id(payload["recipeId"])
         if not recipe:
             return {"message": "the recipe id doesn't exist"}, 400
         else:

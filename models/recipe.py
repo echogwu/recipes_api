@@ -1,37 +1,30 @@
-from re import I
-import xxlimited
-from db import db
+from typing import List
+
+from utils.db import dynamodb
+from utils.constants import RECIPE_TABLE_NAME
+from boto3.dynamodb.conditions import Attr, Key
+from utils.json_encoder import JsonDecimalEncoder
+import json
+
+table = dynamodb.Table(RECIPE_TABLE_NAME)
 
 
-class RecipeModel(db.Model):
-    __tablename__ = "recipes"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    active_time = db.Column(db.Integer)
-    total_time = db.Column(db.Integer)
-    # format for the tags attribute would be "non_dairy|non_wheat|comfort_food"
-    tags = db.Column(db.String(500))
-    # format for the ingredients would be "shreddd carrot/1 cup|coconut milk/6 ounces|ground chicken/1 lb"
-    ingredients = db.Column(db.String)
-    # format for the instructions would be "step 1 description|step 2 description|step_3 description"
-    instructions = db.Column(db.String)
-
-    TAGS = "tags"
-    INGREDIENTS = "ingredients"
-    INSTRUCTIONS = "instructions"
+class RecipeModel():
 
     def __init__(
         self,
-        id: int,
+        recipeId: str,
         name: str,
-        active_time: int,
-        total_time: int,
-        tags: str,
-        ingredients: str,
-        instructions: str,
+        description: str = None,
+        active_time: int = None,
+        total_time: int = None,
+        tags: List[str] = None,
+        ingredients: List[dict] = None,
+        instructions: List[str] = None,
     ):
+        self.recipeId = recipeId
         self.name = name
+        self.description = description
         self.active_time = active_time
         self.total_time = total_time
         self.tags = tags
@@ -40,69 +33,118 @@ class RecipeModel(db.Model):
 
     def json(self):
         return {
-            "id": self.id,
+            "recipeId": self.recipeId,
             "name": self.name,
+            "description": self.description,
             "active_time": self.active_time,
             "total_time": self.total_time,
             "tags": self.tags,
             "ingredients": self.ingredients,
-            "instructions": self.instructions,
+            "instructions": self.instructions
         }
 
     @classmethod
-    def parse_db_entry_string(cls, attribute: str, string_to_be_parsed: str):
-        """
-        This method is to convert strings stored in db as ingredients, instructions and tags into python list.
-        # format for the `tags` attribute would be "non_dairy|non_wheat|comfort_food"
-        # format for the `ingredients` would be "shreddd carrot/1 cup|coconut milk/6 ounces|ground chicken/1 lb"
-        # format for the `instructions` would be "step 1 description|step 2 description|step_3 description"
-        """
-        allowed_attributes = [cls.TAGS, cls.INGREDIENTS, cls.INSTRUCTIONS]
-        if attribute not in allowed_attributes:
-            raise Exception(
-                f"attribute name shoud be one of {allowed_attributes}")
-        result = string_to_be_parsed.split("|")
-        if attribute != cls.INGREDIENTS:
-            return result
-        else:
-            all_ingredients = {}
-            for ele in result:
-                ingredient = ele.split("/")
-                all_ingredients[ingredient[0]] = ingredient[1]
-            return all_ingredients
+    def jsonify(cls, recipe: dict) -> json:
+        # input recipe is the original recipe dict we get from dynamodb that has decimal type instead of int
+        return json.loads(json.dumps(recipe, cls=JsonDecimalEncoder))
 
     @classmethod
-    def find_all_recipes(cls):
-        return cls.query.all()
+    def _find_all_recipes(cls) -> List["RecipeModel"]:
+        return [(RecipeModel.jsonify(recipe))
+                for recipe in table.scan().get("Items")]
+
+    @classmethod
+    def find_recipes_by_args(cls, args: dict) -> List["RecipeModel"]:
+        if not args:
+            return RecipeModel._find_all_recipes()
+        name = args.get("name")
+        tags = args.get("tags")
+        if tags:
+            tags = tags.split(",")
+        active_time = int(args.get("active_time", 0))
+        total_time = int(args.get("total_time", 0))
+        ingredients = args.get("ingredients")
+        if ingredients:
+            ingredients = ingredients.split(",")
+
+        filter_expression = ''
+        if name:
+            filter_expression = Attr('name').contains(name)
+        if tags:
+            for tag in tags:
+                attr_filter_expression = Attr('tags').contains(tag)
+                filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
+        if active_time:
+            attr_filter_expression = Attr('active_time').lte(active_time)
+            filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
+        if total_time:
+            attr_filter_expression = Attr('total_time').lte(total_time)
+            filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
+        if ingredients:
+            for ingredient in ingredients:
+                attr_filter_expression = Attr(
+                    f"ingredients.{ingredient}").exists()
+                filter_expression = filter_expression & attr_filter_expression if filter_expression else attr_filter_expression
+        recipes = table.scan(Select='ALL_ATTRIBUTES',
+                             Limit=10,
+                             FilterExpression=filter_expression).get("Items")
+        return [(RecipeModel.jsonify(recipe)) for recipe in recipes]
+
+    @classmethod
+    def find_recipes_by_partial_name(cls, partial_name: str):
+        response = table.query(
+            IndexName='nameIndex',
+            Select='ALL_ATTRIBUTES',
+            KeyConditionExpression=Key('name').eq(partial_name))
+        return [
+            RecipeModel.jsonify(recipe) for recipe in response.get("Items")
+        ]
 
     @classmethod
     def find_recipe_by_recipe_name(cls, name: str):
-        return cls.query.filter_by(name=name).first()
-
-    @classmethod
-    def find_recipes_by_partial_recipe_name(cls, name: str):
-        # return cls.query.filter_by(name=name)
-        return cls.query.filter(cls.name.ilike(name)).all()
+        result = table.query(
+            IndexName='nameIndex',
+            Select='ALL_ATTRIBUTES',
+            KeyConditionExpression=Key('name').eq(name)).get("Items")
+        return RecipeModel(
+            **RecipeModel.jsonify(result[0])) if result else None
 
     @classmethod
     def find_recipes_by_ingredient_name(cls, ingredient: str):
-        return cls.query.filter(cls.ingredients.ilike(ingredient)).all()
+        response = table.scan(
+            Limit=10,
+            Select='ALL_ATTRIBUTES',
+            ReturnConsumedCapacity='TOTAL',
+            FilterExpression=Attr('ingredients.name').contains(ingredient),
+            ConsistentRead=True)
+        return [
+            RecipeModel.jsonify(recipe) for recipe in response.get("Items")
+        ]
 
     @classmethod
-    def find_recipe_by_id(cls, id: int):
-        return cls.query.filter_by(id=id).first()
+    def find_recipe_by_id(cls, recipeId: int) -> "RecipeModel":
+        recipe = table.get_item(Key={'recipeId': recipeId}).get("Item")
+        return RecipeModel(**RecipeModel.jsonify(recipe)) if recipe else None
 
     @classmethod
     def find_recipes_by_tags(cls, tags: str):
         """
-        example argument: "non_dairy,non_wheat,comfort_food"
+        find all the recipes that have all the tags
         """
-        tags = tags.split(",")
-        result = set()
+        recipes = set()
         for tag in tags:
-            result = result.union(
-                cls.query.filter(cls.tags.contains(tag)).all())
-        return list(result)
+            recipes_with_a_specific_tag = set(
+                table.scan(Limit=10,
+                           Select='ALL_ATTRIBUTES',
+                           ReturnConsumedCapacity='TOTAL',
+                           FilterExpression=Attr('tags').contains(tag),
+                           ConsistentRead=True).get("Items"))
+            if recipes:
+                recipes = recipes.intersection(recipes_with_a_specific_tag)
+            else:
+                recipes = set(recipes_with_a_specific_tag)
+        recipes = list(recipes)
+        return [RecipeModel.jsonify(recipe) for recipe in recipes]
 
     @classmethod
     def get_all_tags(cls):
@@ -110,18 +152,19 @@ class RecipeModel(db.Model):
         return a list of unique tags.
         example result: ["comfort_food","non_dairy","non_wheat"]
         """
-        entries = db.session.query(cls.tags).all()
         tags = set()
-        for entry in entries:
-            tags = tags.union(
-                cls.parse_db_entry_string(attribute=cls.TAGS,
-                                          string_to_be_parsed=entry[0]))
+        response = table.scan(Limit=100,
+                              Select='SPECIFIC_ATTRIBUTES',
+                              AttributesToGet=['tags'],
+                              ReturnConsumedCapacity='TOTAL',
+                              ConsistentRead=True)
+        tags_list = response.get("Items")
+        for ele in tags_list:
+            tags = tags.union(ele.get("tags"))
         return list(tags)
 
     def save_to_db(self):
-        db.session.add(self)
-        db.session.commit()
+        table.put_item(Item=self.json())
 
-    def delete_from_db(self):
-        db.session.delete(self)
-        db.session.commit()
+    def delete_from_db(self, recipe_id: int):
+        table.delete_item(Key={'recipeId': recipe_id})
