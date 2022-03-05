@@ -44,16 +44,16 @@ class Recipes(Resource):
         Otherwise, it will save the recipe to the database.
         """
         payload = get_request_args(recipe_schema)
+        recipe_id = payload["recipeId"]
+        if RecipeModel.find_recipe_by_id(recipe_id):
+            return {
+                "message": f"a recipe with id '{recipe_id}' already exists."
+            }, 400
         recipe_name = payload["name"]
         if RecipeModel.find_recipe_by_recipe_name(recipe_name):
             return {
                 "message":
                 f"a recipe with name '{recipe_name}' already exists."
-            }, 400
-        recipe_id = payload["recipeId"]
-        if RecipeModel.find_recipe_by_id(recipe_id):
-            return {
-                "message": f"a recipe with id '{recipe_id}' already exists."
             }, 400
         recipe = RecipeModel(**payload)
         recipe.save_to_db()
